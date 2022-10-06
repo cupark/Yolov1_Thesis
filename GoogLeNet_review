@@ -1,0 +1,38 @@
+ 1. GoogLeNet History
+    2014년 ILSVRC(이미지넷 이미지 인식대회)에서 VGGNet(VGG19)를 이기고 우승한 알고리즘. 
+    22개의 Layer 층으로 구성되어 있으며 논문은 'Going Deeper with Convolutions'이다. 
+    
+ 2. GoogLeNet Architecture
+    1) 1 x 1 Convolution
+       - 1 x 1 Convolution은 Bottleneck의 형태를 갖기 때문에 Bottleneck Module로 이해하면된다.
+       - Bottleneck에 필요한 선수지식 
+         (1) Convolution Parameter = Kernel Size x Kernel Size x Input Channel x Output Channel
+         (2) Kernel Size를 1을 사용하여 Input Channel에 대한 Output Channel의 결과 값만을 다룸.
+         
+       - Bottleneck Module을 사용하는 이유는 2가지, 유의할 점이 있다. 
+           (1) Bottleneck Module 사용 이유 
+               1. Kernel Size를 1로 사용하여 Parameter의 수를 감소시켜 연산량을 줄인다.
+                  즉, 연산 속도를 빠르게 할 수 있다.
+               2. Kernel Size를 1로 사용하여 Input Channel의 대한 Output Channel 즉 Feature Map의 변화만을 사용 가능하다.
+                  즉, Channel에 대한 특징 추출이 용이하다.
+           (2) Bottleneck Moduel 사용에 유의할 점
+               1. Convolution Parameter의 Data가 줄어든다는 점은 데이터 손실을 의미한다. 따라서 데이터 손실(Parameter 감소)와 
+                  연산 속도에 대한 보상이 서로 Tradeoff 관계이다. 그러므로 적절하게 사용해야 한다. 
+       -  1 x 1 Convolution은 Feature Map의 갯수를 줄이는 목적으로 사용된다.
+          ex)  5 x 5 Convolution Feature Map
+               1) 특성맵 (14 x 14 x 480) 
+               2) 필터 (5 x 5 x 480) x 48 
+               3) Convolution Feature Map (14 x 14 x 48)
+               4) 연산 횟수 = 14 x 14 x 48 x 5 x 5 x 480 = 112,9M
+               
+               1 x 1 Convolution Feature Map
+               1) 특성맵 (14 x 14 x 480)
+               2) 필터 (1 x 1 x 480) x 16
+               3) Convolution Feature Map (14 x 14 x 16)
+               4) 필터 (5 x 5 x 16) x 48
+               5) Convolution Feature Map (14 x 14 x 48)
+               6) 연산 횟수 = (14 x 14 x 16 x 1 x 1 x 480) + (14 x 14 x 48 x 5 x 5 x 16) = 5.3M
+               
+               ** 112M -> 5M으로 연산량을 줄일 수 있다. 연산량이 줄었다는 점에서 레이어를 더 깊게 만들 수 있다.
+               
+         
