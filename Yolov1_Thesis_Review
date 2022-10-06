@@ -28,7 +28,8 @@ You Only Look Once v1
     7) 탐지된 객체에 대한 Bounding Box와 Confidence-Score, Conditional Class Probability를 통하여 Object Detection을 수행한다.
   
  5. Yolov1 Model Architecture
-  1)
+  1) Input Image (448 x 448, 3Channel)
+  
    
   
   
