@@ -57,14 +57,14 @@ You Only Look Once v1
        **x,y는 Bounding Box의 중심점을 의한다. 해당 x, y의 위치가 Grid cell에서 x가 가장왼쪽, y가 중심에 있다면 x = 0, y = 0.5를 갖는다.
     6) 탐지된 객체에 대한 Bounding Box와 Confidence-Score, Conditional Class Probability를 통하여 Object Detection을 수행한다.
    
- 6. GoogLeNet Model Network Design (1. Inference 단계)
+ 6. GoogLeNet Model Network Design 
     1) 24 Convolution Layer + 2 Fully Connected Layer 
        - Pretrained = 20 Convolution Layer                            : 1,000 Class ImageNet (224 x 224)
        - Fine-Tuned =  4 Convolution Layer + 2 Fully Connected Layer  : PASCAL VOC (448 x 448)
        - Reduction Layer = 1 x 1 Reduction Layer로 연산량 감소 ( 1 x 1 Conv, filter의 개수를 Input dim보다 작게 함)
          Conv Layer 중첩에 따른 연산량 증가를 막기위한 Reduction Layer를 사용.
   
- 7. Training Stage (2. Training 단계)
+ 7. Training Stage
     1) 특정 Object에 Responsible한 cell i는 GT(Ground Truth) Box의 중심이 위치하는 cell로 할당 
        - ex) GT Box가 cell 4, 5, 6, 7에 거쳐져 있을때 그 중심이 Grid Cell 6에 있다면 Responsible한 cell을 6번째 cell로 할당한다. 
     2) 6.에 Inference 단계에서는 Bounding Box를 여러개 예측하는것으로 나타났지만, 학습할때는 Bounding Box 1개를 선택하여 사용한다. 
@@ -78,37 +78,36 @@ You Only Look Once v1
         (2) 모든 Grid cell에서 예측한 M개의 Pr(Class i | Object)과 Ground Truth 값
         (3) 모든 Grid cell의 Pr(Object) * IOU 예측값과 Ground Truth Box의 값
         (4) (1) + (2) + (3) => Grid cell에 Object가 존재하는 경우의 오차와 Predictor Box로 선정된 경우의 오차만을 학습한다. 
+        
+ 8. Inference Stage
+    1) Input Image -> Conv Layers -> Output Tensor -> Class-specific Confidence Score
+    2) S(Size) =4, B(Bounding Box) =2, C(Classification) = 20, pc = Confidence Score
+       Output Tensor(4 x 4 x 30) = x1, y2, w1, h1, pc1, x2, y2, w2, h2, pc2, c1, c2, c3, ... , c20 (30개)
+       => Class-Specific Confidence Score =  pc(Confidence Score) x Class Probability (c1, c2, c3, ... , c20)
+       (1) BBox#1 Output Tensor = x1, y2, w1, h1, pc1, c1, c2, c3, ... , c20
+       (2) BBox#2 Output Tensor = x2, y2, w2, h2, pc2, c1, c2, c3, ... , c20 
+       .
+       .
+       .
+       (3) BBox#1's Class-Specific Confidence Score = x1, y1, w1, h1, pc1 x (c1, c2, c3, ... , c20)
+       (4) BBox#2's Class-Specific Confidence Score = x2, y2, w2, h2, pc2 x (c1, c2, c3, ... , c20)
+       (5) BBox#32's Class-Specific Confidence Score = x32, y32, w32, h32, pc32 x (c1, c2, c3, ... , c20)
        
-       
-          
-  
-  
- 7. Object Detection
-    1) Object classification
-       - 이미지 내 Single object
-       - Object Class
-       - Output : Class probability
-       
-    2) Object Localization
-       - 이미지 내 Single object
-       - Object Class
-       - Bounding Box (Regression)
-       - Output: x, y, w, h
-       
-    3) Object Detection
-       - 이미지 내 Multi object
-       - Object class
-       - Bounding Box
-       - Output : (1) Class probability + (x, y, w, h), (2) Class probability + (x, y, w, h)
-
-                  
- 
- 
- 
- 7. Yolov1 Model Architecture
-  1) Input Image (448 x 448, 3Channel)
-  
-   
-  
-  
-  
+       - 4 x 4 Grid cell, Bounding Box = 2 -> 4 x 4 x 2 = 32개의 Bounding Box가 생성 
+         : 1개의 Object에 대한 Bounding Box가 32개인데 Grid cell이 더 나누어지거나 cell에 할당된 Bounding Box가 많아지면 
+           많은 Bounding Box가 처리되어야 한다. 이부분을 해결하기 위한 알고리즘으로 NMS를 사용한다. 
+           
+       (6) NMS(Non Maximum Suppresion) : 하나의 객체에 대해 많은 Bounding Box 중 가장 신뢰도가 높은 하나의 Bounding Box만 남기는 
+           Post-precessing이다. 단, Bbox#1 내부 c1, c2, c3 끼리의 비교가 아닌 Bbox#1의 c1, Bbox#2의 c1, ... , Bbox#32의 c1인 Class 단위로
+           NMS를 진행해야한다. 
+           - B : 생성된 Bounding Box의 총 집합 
+           - S : B의 Class-Specific Confidence Score
+           - N : overlap 임계치 
+           - D : 최종 선택될 B를 담을 리스트 
+           - psuedo code 
+              for i in range(len(class)):
+                 if bbox['pc'] < 0:
+                    bbox_list.remove(bbox)
+              while (not processed bbox exists):
+                 selected_bbox = bbox with the hightest pc
+                 bbox_list.remove(other boxes which has high IOU with selected_bbox)
