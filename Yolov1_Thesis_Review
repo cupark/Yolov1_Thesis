@@ -19,23 +19,65 @@ You Only Look Once v1
        - 이미지 -> Regional Proposal -> Classification : Object Yes or No, Box Regression -> Proposed Regions
        - 이미지 -> Classification -> Feature Map    
        - Proposed Regions + Feature Map -> Fully Connected Layer -> For each proposed region
-    
+       
+ 4. Main Contribution
+    1) Object Detection을 Regression problem으로 관점을 전환함   
+    2) Unified Architecture 
+       - 하나의 신경망으로 Classification과 Localization을 예측 
+    3) DPM, RCNN 모델보다 속도를 개선
+    4) 여러 도메인에서 Object Detection이 가능
  
- 4. Yolov1 Workflow 
-    1) Input Image(Original Information)을 S x S의 사이즈로 그리드 분할을 진행한다. (논문에 따르면 S = 7)
+ 5. Yolov1 Workflow (S(Size) =4, B(Bounding Box) =2, C(Classification) = 20)
+    1) Input Image(Original Information)을 S x S의 사이즈로 그리드 분할을 진행한다.
     2) Input Image의 Feature Map을 통하여 Prediction Tensor를 생성한다. 
        Prediction Tensor : (1) Bounding Box Information each Grid cell 
                            (2) Confidence-Score each Grid cell
                            (3) Conditional Class Probability each Grid cell
     3) 생성된 Prediction Tensor를 통하여 Bounding Box를 조정 및 분류한다.
-    4) 각각의 Grid cell은 N개의 Bounding Box와 각 Bounding Box에 대한 Confidence-Score를 갖는다. 
-       **Confidence-Score = Pr(Object)*IOU
-    5) 각각의 Grid cell은 M개의 Conditional Class Probability를 갖는다.
-    6) 1) ~ 5)의 결과로 각각의 Bounding Box는 (x,y)좌표, w, h, confidence를 갖는다. 
+    
+    4-1) 각각의 Grid cell은 N개의 Bounding Box와 각 Bounding Box에 대한 Confidence-Score를 갖는다. (병렬적으로 진행)
+       ** Bounding Box #1 = x1, y1, w1, h1, Pc1(Confidence-Score)를 갖는다.
+          ** 위에서 사용되는 w1, h1의 값은 Bounding Box의 w값에 전체 이미지 w를 나누어 Normailize하여 사용한다. (h도 마찬가지)
+       ** Bounding Box #2 = x2, y2, w2, h2, Pc2(Confidence-Score)를 갖는다.
+          
+       ** Confidence-Score = Pr(Object)*IOU, Pr(Object)는 물체가 Bounding Box내에 있으면 1, 없으면 0을 갖는다.
+       
+    4-2) 각각의 Grid cell은 M개의 Conditional Class Probability를 갖는다. (병렬적으로 진행)
+       ** Pr ( Class i | Object ) : 물체가 Bounding Box 내에 있을때, Grid cell에 있는 Object가 i번째 class에 속할 확률 
+          ex) c1 : 고양이, c2 : 강아지, c3 : 코끼리, c4 : 말, .... , c20 : 호랑이
+              c1 = 0.9, c2 = 0.1, c3 = 0.08, c4 = 0.02, .... , c20 = 0.3
+    
+    
+    5) 1) ~ 5)의 결과의 Output Tensor는 각각의 Bounding Box는 (x,y)좌표, w, h, confidence를 갖는다. 
+       ** x1, y1, w1, h1, Pc1, x2, y2, w2, h2, Pc2, c1, c2, c3, .. , c20
+          ------------BB#1(5)  ------------BB#2(5)  --------------Pr(20)  = 30개
+          
+       ** Grid Size가 4였으므로, 4 x 4 x 30의 Output Tensor가 만들어진다.   
+          
        **x,y는 Bounding Box의 중심점을 의한다. 해당 x, y의 위치가 Grid cell에서 x가 가장왼쪽, y가 중심에 있다면 x = 0, y = 0.5를 갖는다.
-    7) 탐지된 객체에 대한 Bounding Box와 Confidence-Score, Conditional Class Probability를 통하여 Object Detection을 수행한다.
+    6) 탐지된 객체에 대한 Bounding Box와 Confidence-Score, Conditional Class Probability를 통하여 Object Detection을 수행한다.
+   
+ 6. GoogLeNet Model Network Design (1. Inference 단계)
+    1) 24 Convolution Layer + 2 Fully Connected Layer 
+       - Pretrained = 20 Convolution Layer                            : 1,000 Class ImageNet (224 x 224)
+       - Fine-Tuned =  4 Convolution Layer + 2 Fully Connected Layer  : PASCAL VOC (448 x 448)
+       - Reduction Layer = 1 x 1 Reduction Layer로 연산량 감소 ( 1 x 1 Conv, filter의 개수를 Input dim보다 작게 함)
+         Conv Layer 중첩에 따른 연산량 증가를 막기위한 Reduction Layer를 사용.
   
- 5. Object Detection
+ 7. Training Stage (2. Training 단계)
+    1) 특정 Object에 Responsible한 cell i는 GT(Ground Truth) Box의 중심이 위치하는 cell로 할당 
+       - ex) GT Box가 cell 4, 5, 6, 7에 거쳐져 있을때 그 중심이 Grid Cell 6에 있다면 Responsible한 cell을 6번째 cell로 할당한다. 
+    2) 6.에 Inference 단계에서는 Bounding Box를 여러개 예측하는것으로 나타났지만, 학습할때는 Bounding Box 1개를 선택하여 사용한다. 
+       1개의 Bounding Box를 선정하는 기준은 IOU이다. 학습단계에서 GTB와 IOU가 가장 높은 Prediction Box 1개를 활용하여 학습을 진행한다. 
+    3) IOU : Conv Layer를 통해 생성된 Prediction Box 중에서 GTB와 겹치는 부분 정도를 의미한다. 
+    4) 2), 3)의 결과로 GTB와의 IOU가 가장 높은 1개의 Box만을 사용하여 학습한다. 
+    5) 선정된 1개의 Box를 Loss Function에 어떻게 반영할 것인가. 
+       - 
+       
+          
+  
+  
+ 7. Object Detection
     1) Object classification
        - 이미지 내 Single object
        - Object Class
@@ -52,12 +94,12 @@ You Only Look Once v1
        - Object class
        - Bounding Box
        - Output : (1) Class probability + (x, y, w, h), (2) Class probability + (x, y, w, h)
-       
+
                   
  
  
  
- 6. Yolov1 Model Architecture
+ 7. Yolov1 Model Architecture
   1) Input Image (448 x 448, 3Channel)
   
    
