@@ -69,10 +69,16 @@ You Only Look Once v1
        - ex) GT Box가 cell 4, 5, 6, 7에 거쳐져 있을때 그 중심이 Grid Cell 6에 있다면 Responsible한 cell을 6번째 cell로 할당한다. 
     2) 6.에 Inference 단계에서는 Bounding Box를 여러개 예측하는것으로 나타났지만, 학습할때는 Bounding Box 1개를 선택하여 사용한다. 
        1개의 Bounding Box를 선정하는 기준은 IOU이다. 학습단계에서 GTB와 IOU가 가장 높은 Prediction Box 1개를 활용하여 학습을 진행한다. 
-    3) IOU : Conv Layer를 통해 생성된 Prediction Box 중에서 GTB와 겹치는 부분 정도를 의미한다. 
-    4) 2), 3)의 결과로 GTB와의 IOU가 가장 높은 1개의 Box만을 사용하여 학습한다. 
-    5) 선정된 1개의 Box를 Loss Function에 어떻게 반영할 것인가. 
-       - 
+      - IOU : Conv Layer를 통해 생성된 Prediction Box 중에서 GTB와 겹치는 부분 정도를 의미한다. 
+      - 결과로 GTB와의 IOU가 가장 높은 1개의 Box만을 사용하여 학습한다. 
+      - 선정된 1개의 Box를 Loss Function에 어떻게 반영할 것인가. 
+        사용되는 Box의 IOU 스칼라 값을 1로 선언하면 사용하고, 0으로 하면 사용하지 않아 Loss값이 전파되지 않는다. 
+    3) MSE : (TrainingStageMSE파일)
+        (1) 모든 Grid cell에서 예측한 N개의 Bounding Box의 좌표와 Ground Truth Box의 좌표 
+        (2) 모든 Grid cell에서 예측한 M개의 Pr(Class i | Object)과 Ground Truth 값
+        (3) 모든 Grid cell의 Pr(Object) * IOU 예측값과 Ground Truth Box의 값
+        (4) (1) + (2) + (3) => Grid cell에 Object가 존재하는 경우의 오차와 Predictor Box로 선정된 경우의 오차만을 학습한다. 
+       
        
           
   
