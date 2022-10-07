@@ -111,3 +111,10 @@ You Only Look Once v1
               while (not processed bbox exists):
                  selected_bbox = bbox with the hightest pc
                  bbox_list.remove(other boxes which has high IOU with selected_bbox)
+                 
+ 9. 한계점
+    1) 작은 물에체 대해서 탐지 성능이 낮아진다.
+       - Object가 작아지는 경우 IOU의 값의 차이도 줄어들어 근소한 차이로 Predictor가 결정되기 때문이다.
+       
+    2) Object의 비율이 달라지면 Detection의 성능이 낮아진다. 
+       - 대부분의 Detection 모델의 공통적인 한계점이다.
