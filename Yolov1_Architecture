@@ -9,6 +9,18 @@ Yolov1 Architecture
 =========================================================================================================================
 
 =========================================================================================================================
+  1. Yolov1 Process
+     1) Image: 원본 영상
+     2) CNN: 원본 영상에 대한 합성곱 연산
+     3) Fully Connected Layer: 1차원 벡터생성
+     4) Prediction Tensor: 학습 데이터, (S x S x (B * 5 + C)), S: Grid cell, B: Bounding Box (x, y, w, h, confidence Score,
+                           C: Classification
+     5) Loss Function: Multi Loss = Coordinate Loss + Confidence Score Loss + No-Object Penalties + Classfication Loss
+                       PT = (x, y, w, h, Confidence-Score) * B + Classes
+                       Loss = X,Y에 대한 식 + W, H에 관한식 + Confidence-Score에 관한식 + Classes에 관한식으로 구성              
+=========================================================================================================================
+
+=========================================================================================================================
   1. 9단계로 구성되어 있다. 
   2. 24개의 Convolution Layer 층과 뒤이어 2개의 Fully Connected Layer 그리고 1 x 1 Reduction Layer를 수행한다.
   3. 24개의 Convolution Layer 중 20개의 Convolution Layer는 1000 class ImageNet(224 x 224)으로 Pretrain 된다. 
